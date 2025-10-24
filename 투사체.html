@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>투사체 피하기 게임</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            width: 500px;
+            height: 600px;
+            position: relative;
+            background-color: #222;
+            overflow: hidden;
+            border: 3px solid #444;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        #player {
+            width: 40px;
+            height: 40px;
+            background-color: #ff4444;
+            position: absolute;
+            left: 230px;
+            top: 550px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .projectile {
+            width: 20px;
+            height: 20px;
+            background-color: #4da6ff;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 10px #4da6ff;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            color: #ff4444;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ff4444;
+            display: none;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="player"></div>
+        <div id="projectiles"></div>
+        <div id="game-over">YOU DIE</div>
+        <div id="score">Speed: 1x</div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const player = document.getElementById('player');
+        const projectilesContainer = document.getElementById('projectiles');
+        const gameOverEl = document.getElementById('game-over');
+        const scoreEl = document.getElementById('score');
+
+        // Game settings
+        const gameWidth = 500;
+        const gameHeight = 600;
+        const playerWidth = 40;
+        const playerHeight = 40;
+        const projectileSize = 20;
+
+        // Game state
+        let playerX = (gameWidth - playerWidth) / 2;
+        let projectiles = [];
+        let speed = 2;
+        let gameActive = true;
+        let spawnRate = 1000;
+        let lastTime = 0;
+
+        // Player movement
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            if (e.key === 'ArrowLeft') {
+                playerX = Math.max(0, playerX - 15);
+            } else if (e.key === 'ArrowRight') {
+                playerX = Math.min(gameWidth - playerWidth, playerX + 15);
+            }
+            player.style.left = playerX + 'px';
+        });
+
+        // Projectile creation
+        function spawnProjectile() {
+            if (!gameActive) return;
+            const randomX = Math.random() * (gameWidth - projectileSize);
+            const projectile = document.createElement('div');
+            projectile.className = 'projectile';
+            projectile.style.left = randomX + 'px';
+            projectile.style.top = '0px';
+            projectilesContainer.appendChild(projectile);
+            projectiles.push({ 
+                x: randomX, 
+                y: 0, 
+                element: projectile,
+                speed: speed * (0.8 + Math.random() * 0.4)
+            });
+        }
+
+        // Game loop
+        function gameLoop(timestamp) {
+            if (!gameActive) return;
+
+            // Spawn projectiles
+            if (!lastTime || timestamp - lastTime > spawnRate) {
+                spawnProjectile();
+                lastTime = timestamp;
+            }
+
+            // Update projectiles
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const projectile = projectiles[i];
+                projectile.y += projectile.speed;
+                projectile.element.style.top = projectile.y + 'px';
+
+                // Remove out of bounds projectiles
+                if (projectile.y > gameHeight) {
+                    projectile.element.remove();
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                // Collision detection
+                if (checkCollision(projectile)) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // Increase speed over time
+            speed += 0.001;
+            scoreEl.textContent = `Speed: ${speed.toFixed(1)}x`;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function checkCollision(projectile) {
+            const playerLeft = playerX;
+            const playerRight = playerX + playerWidth;
+            const playerTop = playerY;
+            const playerBottom = playerY + playerHeight;
+
+            const projectileLeft = projectile.x;
+            const projectileRight = projectile.x + projectileSize;
+            const projectileTop = projectile.y;
+            const projectileBottom = projectile.y + projectileSize;
+
+            return !(projectileRight < playerLeft || 
+                    projectileLeft > playerRight || 
+                    projectileBottom < playerTop || 
+                    projectileTop > playerBottom);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            gameOverEl.style.display = 'block';
+            player.style.backgroundColor = '#666';
+        }
+
+        // Start game
+        playerY = gameHeight - playerHeight - 10;
+        player.style.left = playerX + 'px';
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
